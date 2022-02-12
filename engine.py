@@ -51,7 +51,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
 
         samples = samples.to(device)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        targets = [{k: v if k=='lms' else v.to(device) for k, v in t.items()} for t in targets]
 
         # inference
         outputs = model(samples)
@@ -221,7 +221,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device):
     # iterate for all eval. examples
     for samples, targets in metric_logger.log_every(data_loader, 256, header):
         samples = samples.to(device)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        targets = [{k: v if k=='lms' else v.to(device) for k, v in t.items()} for t in targets]
 
         # inference
         outputs = model(samples)

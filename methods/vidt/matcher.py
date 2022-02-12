@@ -74,6 +74,7 @@ class HungarianMatcher(nn.Module):
             # Also concat the target labels and boxes
             tgt_ids = torch.cat([v["labels"] for v in targets])
             tgt_bbox = torch.cat([v["boxes"] for v in targets])
+            tgt_lms = [v["lms"] for v in targets]
 
             # Compute the classification cost.
             alpha = 0.25

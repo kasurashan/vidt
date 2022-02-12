@@ -121,6 +121,8 @@ class ConvertCocoPolysToMask(object):
 
         target["orig_size"] = torch.as_tensor([int(h), int(w)])
         target["size"] = torch.as_tensor([int(h), int(w)])
+       
+        target["lms"] = ["small" if i<32**2 else "medium" if i<96**2 else "large" for i in target["area"]]
 
         return image, target
 
