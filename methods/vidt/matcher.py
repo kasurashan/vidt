@@ -95,6 +95,22 @@ class HungarianMatcher(nn.Module):
             C = C.view(bs, num_queries, -1).cpu()
 
             sizes = [len(v["boxes"]) for v in targets]
+            
+            '''
+            Cost matrix 나누는 부분
+            아직 수정 중
+            for i, c in enumerate(C.split(sizes, -1)):
+                LMS = tgt_lms[i]
+                
+                LMS = np.array(LMS)
+                small_idx = np.where(LMS == "small")[0].tolist()
+                medium_idx = np.where(LMS == "medium")[0].tolist()
+                large_idx = np.where(LMS == "large")[0].tolist()
+
+                C_small = c[:, :25 , small_idx]
+                C_medium = c[:, 25:75, medium_idx]
+                C_large = c[:, 75:, large_idx]
+            '''
             indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
             return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices]
 
