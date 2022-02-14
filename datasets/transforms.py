@@ -52,7 +52,9 @@ def crop(image, target, region):
 
         for field in fields:
             target[field] = target[field][keep]
-
+        
+        scale_factor = target["scale_factor"] 
+        target["lms"] = ["small" if i<(32**2)*scale_factor else "medium" if i<(96**2)*scale_factor else "large" for i in target["area"]]
     return cropped_image, target
 
 
@@ -135,6 +137,8 @@ def resize(image, target, size, max_size=None):
         area = target["area"]
         scaled_area = area * (ratio_width * ratio_height)
         target["area"] = scaled_area
+        
+    target["scale_factor"] = ratio_width * ratio_height
 
     h, w = size
     target["size"] = torch.tensor([h, w])
