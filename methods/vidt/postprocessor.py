@@ -38,20 +38,25 @@ class PostProcess(nn.Module):
 
     if self.dataset_file == 'coco':
       prob = out_logits.sigmoid()
+      #print(prob.size())
+      #print(prob)
+      #print(prob.view(out_logits.shape[0], -1))
       topk_values, topk_indexes = torch.topk(prob.view(out_logits.shape[0], -1), 100, dim=1)
+      #print(topk_values, topk_indexes)
       scores = topk_values
       topk_boxes = topk_indexes // out_logits.shape[2]
       labels = topk_indexes % out_logits.shape[2]
       boxes = box_ops.box_cxcywh_to_xyxy(out_bbox)
       boxes = torch.gather(boxes, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
-
+      LMS = [["small" if i<91*33-1 else "medium" if i<91*66-1 else "large" for i in topk_indexes[0] ]]  ###### add
+      #print(LMS)
       # and from relative [0, 1] to absolute [0, height] coordinates
       img_h, img_w = target_sizes.unbind(1)
       scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(torch.float32)
       boxes = boxes * scale_fct[:, None, :]
-
-      results = [{'scores': s, 'labels': l, 'boxes': b} for s, l, b in zip(scores, labels, boxes)]
-
+      
+      results = [{'scores': s, 'labels': l, 'boxes': b, 'LMS':lms} for s, l, b, lms in zip(scores, labels, boxes, LMS)] ######add
+      
       return results
 
     elif self.dataset_file == 'voc':

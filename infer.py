@@ -90,58 +90,29 @@ def main(args):
     
     
     test_iter_original0 = iter(dataset_val_original)
-
-    test_iter_original = next(test_iter_original0)
-    test_iter_original = next(test_iter_original0)
-    test_iter_original = next(test_iter_original0)
-    test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-    #test_iter_original = next(test_iter_original0)
-
-
-
-
-    tf = transforms.ToTensor()
-    test_iter_num = tf(test_iter_original[0]).unsqueeze(0)
-    test_iter_info = test_iter_original[1]
+    for i in range(16):
+        test_iter_original = next(test_iter_original0)
     
-    
-    
+        tf = transforms.ToTensor()
+        test_iter_num = tf(test_iter_original[0]).unsqueeze(0)
+        test_iter_info = test_iter_original[1]
 
-    output =  model(test_iter_num)
+        output =  model(test_iter_num)
     
+        #probas = output['pred_logits'].sigmoid()[0, :, :-1]
+        #keep = probas.max(-1).values > 0.2
+        #vis_indexs = torch.nonzero(keep).squeeze(1)
 
     
-    probas = output['pred_logits'].sigmoid()[0, :, :-1]
-    keep = probas.max(-1).values > 0.2
-    vis_indexs = torch.nonzero(keep).squeeze(1)
-
-    
-
-
-    
-    
-
-
-    
-
-    output_final = postprocessors['bbox'](output, test_iter_info["orig_size"].unsqueeze(0).to(device))
-    scores = output_final[0]['scores']
-    boxes = output_final[0]['boxes'] 
-    labels = output_final[0]['labels']
-    
-      
-    plot_results(test_iter_original[0], scores, boxes, labels)
+        #print(output)
+        output_final = postprocessors['bbox'](output, test_iter_info["orig_size"].unsqueeze(0).to(device))
+        #print(output_final)
+        scores = output_final[0]['scores']
+        boxes = output_final[0]['boxes'] 
+        labels = output_final[0]['labels']
+        LMS = output_final[0]['LMS']  #####
+       
+        plot_results(test_iter_original[0], scores, boxes, labels, LMS, i) #####
 
 
 
@@ -171,27 +142,27 @@ COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
           [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933]]
 
 
-def plot_results(pil_img, prob, boxes, labels):
+def plot_results(pil_img, prob, boxes, labels, LMS, i): #####
     plt.figure(figsize=(16,10))
     plt.imshow(pil_img)
     ax = plt.gca()
     colors = COLORS * 100
 
 
-    for p, (xmin, ymin, xmax, ymax), l, c in zip(prob, boxes.tolist(), labels, colors):
+    for p, (xmin, ymin, xmax, ymax), l, c, lms in zip(prob, boxes.tolist(), labels, colors, LMS):######
         ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
                                    fill=False, color=c, linewidth=3))
         
-        text = f'{CLASSES[l]}: {p:0.2f}'
-        ax.text(xmin, ymin, text, fontsize=15,
+        text = f'{CLASSES[l]}: {p:0.2f}: {lms}'#####
+        ax.text(xmin, ymin, text, fontsize=10,
                 bbox=dict(facecolor='yellow', alpha=0.5))
         
-        if p < 0.2 :
+        if p < 0.23 :
             break
 
 
     plt.axis('off')
-    plt.savefig('savefig_default.png')
+    plt.savefig(f'savefig_default{i}.png')
 
 
 
