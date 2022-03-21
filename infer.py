@@ -142,6 +142,7 @@ COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
           [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933]]
 
 
+
 def plot_results(pil_img, prob, boxes, labels, LMS, i): #####
     plt.figure(figsize=(16,10))
     plt.imshow(pil_img)
@@ -149,9 +150,20 @@ def plot_results(pil_img, prob, boxes, labels, LMS, i): #####
     colors = COLORS * 100
 
 
-    for p, (xmin, ymin, xmax, ymax), l, c, lms in zip(prob, boxes.tolist(), labels, colors, LMS):######
-        ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
-                                   fill=False, color=c, linewidth=3))
+    for p, (xmin, ymin, xmax, ymax), l, lms in zip(prob, boxes.tolist(), labels,  LMS):######
+        
+        if lms == 'small':
+            ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
+                                   fill=False, color=colors[0], linewidth=3))
+
+        if lms == 'medium':
+            ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
+                                   fill=False, color=colors[1], linewidth=3))
+
+        if lms == 'large':
+            ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
+                                   fill=False, color=colors[3], linewidth=3))
+
         
         text = f'{CLASSES[l]}: {p:0.2f}: {lms}'#####
         ax.text(xmin, ymin, text, fontsize=10,
