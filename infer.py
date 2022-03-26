@@ -90,9 +90,12 @@ def main(args):
     
     
     test_iter_original0 = iter(dataset_val_original)
+    
     for i in range(16):
         test_iter_original = next(test_iter_original0)
-    
+        
+        gt_bbox = test_iter_original[1]['boxes']
+
         tf = transforms.ToTensor()
         test_iter_num = tf(test_iter_original[0]).unsqueeze(0)
         test_iter_info = test_iter_original[1]
@@ -112,7 +115,7 @@ def main(args):
         labels = output_final[0]['labels']
         LMS = output_final[0]['LMS']  #####
        
-        plot_results(test_iter_original[0], scores, boxes, labels, LMS, i) #####
+        plot_results(test_iter_original[0], gt_bbox, scores, boxes, labels, LMS, i) #####
 
 
 
@@ -139,19 +142,21 @@ CLASSES = [
 
 # colors for visualization
 COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
-          [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933]]
+          [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0,0,0]]
 
 
-
-def plot_results(pil_img, prob, boxes, labels, LMS, i): #####
+def plot_results(pil_img, gt, prob, boxes, labels, LMS, i): #####
     plt.figure(figsize=(16,10))
     plt.imshow(pil_img)
     ax = plt.gca()
     colors = COLORS * 100
 
 
-    for p, (xmin, ymin, xmax, ymax), l, lms in zip(prob, boxes.tolist(), labels,  LMS):######
+    for p, (xmin, ymin, xmax, ymax), (xmin_gt, ymin_gt, xmax_gt, ymax_gt), l, lms in zip(prob, boxes.tolist(), gt.tolist(), labels,  LMS):######
         
+        ax.add_patch(plt.Rectangle((xmin_gt, ymin_gt),  xmax_gt - xmin_gt, ymax_gt - ymin_gt,
+                                   fill=False, color=colors[5], linewidth=5))
+
         if lms == 'small':
             ax.add_patch(plt.Rectangle((xmin, ymin),  xmax - xmin, ymax - ymin,
                                    fill=False, color=colors[0], linewidth=3))
@@ -194,3 +199,5 @@ if __name__ == '__main__':
         args.dim_feedforward = 1024
 
     main(args)
+
+

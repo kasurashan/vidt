@@ -66,6 +66,17 @@ class CocoEvaluator(object):
         for iou_type, coco_eval in self.coco_eval.items():
             print("IoU metric: {}".format(iou_type))
             coco_eval.summarize()
+            
+            stats_summarize = coco_eval.stats  #######
+
+            stat_list = []
+            for i, stat in enumerate(stats_summarize):
+                stat = round(stat,4)
+                stat_list.append(stat)
+            
+            mapList = open(f'./evalList.txt', 'a')
+            mapList.write(f"{stat_list}\n")
+            mapList.close()    
 
     '''
     def summarize(self):
