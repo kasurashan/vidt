@@ -84,75 +84,55 @@ class HungarianMatcher(nn.Module):
             pos_cost_class = alpha * ((1 - out_prob) ** gamma) * (-(out_prob + 1e-8).log())
             cost_class = pos_cost_class[:, tgt_ids] - neg_cost_class[:, tgt_ids]
 
-            # Compute the L1 cost between boxes
-            cost_bbox = torch.cdist(out_bbox, tgt_bbox, p=1)
-
-            # Compute the giou cost betwen boxes
-            cost_giou = -generalized_box_iou(box_cxcywh_to_xyxy(out_bbox),
-                                             box_cxcywh_to_xyxy(tgt_bbox))
-
-            # Final cost matrix
-            C = self.cost_bbox * cost_bbox + self.cost_class * cost_class + self.cost_giou * cost_giou
-            C = C.view(bs, num_queries, -1).cpu()
-
+            cc = self.cost_class * cost_class
+            cc = cc.view(bs, num_queries, -1).cpu()
             sizes = [len(v["boxes"]) for v in targets]
-            
-            '''
-            Cost matrix 나누는 부분
-            아직 수정 중
 
-            '''
+            n_stk = 33 #
+            n_mtk = 33 #
+            n_ltk = 34 #
 
-            indices_total = []
-            # small, medium, large 토큰 나누기
-            n_stk = 25
-            n_mtk = 50
-            n_ltk = 25
-
-            for i, c in enumerate(C.split(sizes, -1)):
+            ratio = 0.8
+            # ratio for token (small, medium, large)
+            for i, c in enumerate(cc.split(sizes, -1)):
                 LMS = tgt_lms[i]
 
                 LMS = np.array(LMS)
                 small_idx = np.where(LMS == "small")[0].tolist()
                 medium_idx = np.where(LMS == "medium")[0].tolist()
                 large_idx = np.where(LMS == "large")[0].tolist()
-                
-                C_small = c[i, :n_stk , small_idx]
-                C_medium = c[i, n_stk:n_stk+n_mtk, medium_idx]
-                C_large = c[i, n_stk+n_mtk:, large_idx]
 
-                idx_all = small_idx + medium_idx + large_idx
-                
-                idx_dict = dict(zip(range(len(idx_all)), idx_all))
+                c[i, :n_stk , small_idx] = c[i, :n_stk , small_idx] * torch.tensor(ratio)
+                c[i, n_stk:n_stk+n_mtk, medium_idx] = c[i, n_stk:n_stk+n_mtk, medium_idx] * torch.tensor(ratio)
+                c[i, n_stk+n_mtk:, large_idx] = c[i, n_stk+n_mtk:, large_idx] * torch.tensor(ratio)
 
-                indices_s_dummy = [linear_sum_assignment(C_small)]
-                idx_s = []
-                for i in indices_s_dummy[0][1]:
-                    idx_s.append(idx_dict[i])
-                idx_s = np.array(idx_s)
-                indices_s = [(indices_s_dummy[0][0] , idx_s)]
-                
-                indices_m_dummy = [linear_sum_assignment(C_medium)]
-                idx_m = []
-                for i in indices_m_dummy[0][1]:
-                    idx_m.append(idx_dict[i + len(idx_s)])
-                idx_m = np.array(idx_m)
-                indices_m = [(indices_m_dummy[0][0] + np.array([n_stk]), idx_m)]
+            # Compute the L1 cost between boxes
+            cost_bbox = torch.cdist(out_bbox, tgt_bbox, p=1)
 
-                indices_l_dummy = [linear_sum_assignment(C_large)]
-                idx_l = []
-                for i in indices_l_dummy[0][1]:
-                    idx_l.append(idx_dict[i + len(idx_s) + len(idx_m)])
-                idx_l = np.array(idx_l)
-                indices_l = [(indices_l_dummy[0][0] + np.array([n_stk+n_mtk]), idx_l)]
-                
-                indices_lms = [(np.concatenate((indices_s[0][0], indices_m[0][0], indices_l[0][0]), axis=0), np.concatenate((indices_s[0][1], indices_m[0][1], indices_l[0][1]), axis=0))]
-                indices_total = indices_total + indices_lms
+            tgt_lms_concat = []
+            for tgt_lms_ in tgt_lms:
+                tgt_lms_concat = tgt_lms_concat + tgt_lms_
 
-            indices = indices_total
+            # ratio for L1 loss
+            for idx, sml in enumerate(tgt_lms_concat):
+                if sml == 'small':
+                    cost_bbox[:,idx] *= 2.0
+                if sml == 'large':
+                    cost_bbox[:,idx] *= 0.5
 
-            #indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
+            # Compute the giou cost betwen boxes
+            cost_giou = -generalized_box_iou(box_cxcywh_to_xyxy(out_bbox),
+                                             box_cxcywh_to_xyxy(tgt_bbox))
+
+            # Final cost matrix
+
+            C = self.cost_bbox * cost_bbox + self.cost_giou * cost_giou
+            C = C.view(bs, num_queries, -1).cpu() + cc
+            sizes = [len(v["boxes"]) for v in targets]
+
+            indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
             return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices]
+
 
 
 def build_matcher(args):
